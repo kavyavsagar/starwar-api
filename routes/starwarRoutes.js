@@ -135,6 +135,55 @@ app.get('/popularspecies', async (req, res) => {
 	}
 });
 
+
+// To get the planet in Star Wars universe provided largest number of vehicle pilots - Planet with large num of pilots
+app.get('/popularpilots', async (req, res) => {
+
+	const a_vehicles = await vehicleModel.find({pilots: { $exists: true, $ne: [] } }).select('pilots -_id');
+
+	try {		
+		let vp_arr = a_vehicles.map(f => f.pilots);		
+		let vp_all = vp_arr.reduce((a, b) => [...a, ...b], []);
+		let uniquePi = vp_all.filter((x, i, a) => a.indexOf(x) == i)
+
+		// piolets		
+		var _final =[], i=0;
+		peopleModel.aggregate([
+		    { $match: { id: {$in: uniquePi} } }, 
+		    { $group: { _id: '$homeworld', count: {$sum: 1}, pilots: { $push : {name: "$name", pid: "$id"} }}
+  			},{$sort: {_id: 1}}
+		]).exec(function(er, a_planet){
+
+			async.each(a_planet, function(pio_row, next) {
+
+				getSpecies(pio_row).then(function(aData){
+
+					_final.push({
+						'planet': aData.planet,
+						'pilot_count': pio_row.count,
+						'pilots': aData.pilots
+					});
+				
+					i++;
+					if(i == a_planet.length){
+						_final.sort(function(a,b) {
+							return b.pilot_count - a.pilot_count;
+						});
+						
+						res.status(200).json({result: _final});	
+					}
+				});
+
+				next(null);
+			});
+			
+		});
+
+	} catch (err) {
+		res.status(500).send(err);
+	}
+});
+
 module.exports = app
 
 /*********************** async functions ***************************/
@@ -151,6 +200,27 @@ async function countOfFilms(arr_people){
 	}
 	return todo;
 }
+
+// To get the planet name and species corresponds to each pilot
+async function getSpecies(r_pilot){	
+	const planet = await planetModel.find({id: r_pilot._id }).select('name -_id');
+	let pilots = [];
+	try{
+		// species
+		let pi = r_pilot.pilots;
+		let pi_arr = pi.map(f => f.pid);	
+		
+		for (const [idx, p] of pi.entries()) {
+			species =  await speciesModel.find({people: {$in: p.pid} }).select('name -_id');
+			let sp_name = (species.length >0)? species[0].name: 'Unknown';
+			pilots.push({'name': p.name,'species': sp_name})
+		}
+	
+		return {'pilots': pilots, 'planet' : planet[0].name};
+	}catch(e){
+		console.log(e)
+	}
+}	
 
 // To sort the array based on value
 function sortByValue(jsObj){
