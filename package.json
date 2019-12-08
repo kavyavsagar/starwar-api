@@ -1,0 +1,27 @@
+{
+  "name": "starwar-api",
+  "version": "1.0.0",
+  "description": "API for starwar app",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "nodemon server.js",
+    "dev": "concurrently --kill-others-on-fail \"npm run server\"",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "Kavya Sagar",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^3.1.0",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "mongoose": "^5.7.13",
+    "underscore": "^1.9.1"
+  },
+  "devDependencies": {
+    "concurrently": "^5.0.0",
+    "nodemon": "^2.0.1"
+  }
+}
