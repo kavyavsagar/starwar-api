@@ -55,4 +55,57 @@ app.get('/longestcrawl', async (req, res) => {
 });
 
 
+// To get the character appeared in most of the films - popular characters
+app.get('/popularcharacter', async (req, res) => {
+
+  	const popular_character = await filmModel.find({}).select('characters -_id');
+
+	try {
+
+		let c_arr = popular_character.map(f => f.characters);
+		let c_all = c_arr.reduce((a, b) => [...a, ...b], []);
+		let occurance = _.countBy(c_all);
+
+		let max = 0;
+		let pids = [];
+		var sortedbyValueJSONArray = sortByValue(occurance);
+
+		async.each(sortedbyValueJSONArray, function(item, callback) {
+			if(!max || max <= item[0]){
+				max = item[0];
+				pids.push(item[1]);
+			}
+			
+			callback(null);
+			
+		}, function(err) {
+			if (err) {
+			   res.status(500).json(err);
+			}
+
+			peopleModel.find({id: {$in: pids}}, function (err, apeople) {
+				res.status(200).json({results: apeople, total: max});
+			});		
+		}); 
+
+	} catch (err) {
+		res.status(500).send(err);
+	}
+});
+
+
 module.exports = app
+
+/*********************** async functions ***************************/
+
+// To sort the array based on value
+function sortByValue(jsObj){
+    var sortedArray = [];
+    for(var i in jsObj)
+    {
+        // Push each JSON Object entry in array by [value, key]
+        sortedArray.push([jsObj[i], i]);
+    }
+    sortedArray.sort();
+    return sortedArray.reverse();
+}
