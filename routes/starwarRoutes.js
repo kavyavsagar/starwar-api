@@ -94,9 +94,63 @@ app.get('/popularcharacter', async (req, res) => {
 });
 
 
+// To get the species appeared in most of the films - popular species
+app.get('/popularspecies', async (req, res) => {
+
+	const species_list = await filmModel.find({}).select('species -_id');
+
+	try {
+		let s_arr = species_list.map(f => f.species);
+		let s_all = s_arr.reduce((a, b) => [...a, ...b], []);
+		let s_count = _.countBy(s_all);
+
+		let popular_ids = Object.entries(s_count).sort((a, b) => b[1] - a[1]).slice(0, 3);
+		let s_ids = popular_ids.map(k => parseInt(k[0]));
+
+		let popular_species = await speciesModel.find({ id: { '$in': s_ids } }).select('name people -_id');
+
+		var i = 0, _final =[];
+		async.each(popular_species, function(spec_row, next) {	
+
+			countOfFilms(spec_row.people).then(function(cnt){ 
+				_final.push({ 'name' : spec_row.name, 'count' : cnt});
+
+				i++;
+				if(i == popular_species.length){
+					_final.sort(function(a,b) {
+						return b.count - a.count;
+					});
+					
+					res.status(200).json({result: _final});	
+				}
+			});
+			
+
+	    	next(null);    	
+	    });
+
+
+	} catch (err) {
+		res.status(500).send(err);
+	}
+});
+
 module.exports = app
 
 /*********************** async functions ***************************/
+
+// To get the count of films where a character exists
+async function countOfFilms(arr_people){
+	let todo = 0;
+	try{
+		for (const [idx, pid] of arr_people.entries()) {
+			todo +=  parseInt(await filmModel.countDocuments({ characters: { $in: [pid] } }))
+		}
+	}catch(e){
+		console.log(e)
+	}
+	return todo;
+}
 
 // To sort the array based on value
 function sortByValue(jsObj){
